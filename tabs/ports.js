@@ -35,6 +35,11 @@ TABS.ports.initialize = function (callback, scrollPosition) {
         functionRules.push(islFunctionRule);
     }
 
+    if (semver.gte(CONFIG.apiVersion, "1.18.0")) {
+        var serFunctionRule = {name: 'TELEMETRY_SER',    groups: ['telemetry'], sharableWith: ['msp'], notSharableWith: ['peripherals'], maxPorts: 1};
+        functionRules.push(serFunctionRule);
+    }
+
     if (semver.gte(CONFIG.apiVersion, "1.31.0")) {
         functionRules.push({ name: 'ESC_SENSOR', groups: ['sensors'], maxPorts: 1 });
         functionRules.push({ name: 'TBS_SMARTAUDIO', groups: ['peripherals'], maxPorts: 1 });

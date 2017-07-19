@@ -826,6 +826,9 @@
     "portsFunction_TELEMETRY_ISL": {
         "message": "ISL"
     },
+    "portsFunction_TELEMETRY_SER": {
+        "message": "SER"
+    },
     "portsFunction_TELEMETRY_MSP": {
         "message": "MSP"
     },

@@ -24,7 +24,8 @@ function MspHelper () {
     'TBS_SMARTAUDIO': 11,
     'TELEMETRY_IBUS': 12,
     'IRC_TRAMP': 13,
-    'TELEMETRY_ISL':14
+    'TELEMETRY_ISL':14,
+    'TELEMETRY_SER':16
   };
 }
 
