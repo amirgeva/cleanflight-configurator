@@ -25,6 +25,7 @@ function MspHelper () {
     'TELEMETRY_IBUS': 12,
     'IRC_TRAMP': 13,
     'TELEMETRY_ISL':14,
+    'RUNCAM_SPLIT_CONTROL': 15, // support communitate with RunCam Split
     'TELEMETRY_SER':16
   };
 }
@@ -66,9 +67,9 @@ MspHelper.prototype.process_data = function(dataHandler) {
                 CONFIG.activeSensors = data.readU16();
                 CONFIG.mode = data.readU32();
                 CONFIG.profile = data.readU8();
-    
+
                 TABS.pid_tuning.checkUpdateProfile(false);
-    
+
                 sensor_status(CONFIG.activeSensors);
                 $('span.i2c-error').text(CONFIG.i2cError);
                 $('span.cycle-time').text(CONFIG.cycleTime);
@@ -83,28 +84,28 @@ MspHelper.prototype.process_data = function(dataHandler) {
                 if (semver.gte(CONFIG.apiVersion, "1.16.0")) {
                     CONFIG.numProfiles = data.readU8();
                     CONFIG.rateProfile = data.readU8();
-    
+
                     TABS.pid_tuning.checkUpdateProfile(true);
                 }
-    
+
                 sensor_status(CONFIG.activeSensors);
                 $('span.i2c-error').text(CONFIG.i2cError);
                 $('span.cycle-time').text(CONFIG.cycleTime);
                 $('span.cpu-load').text(chrome.i18n.getMessage('statusbar_cpu_load', [CONFIG.cpuload]));
                 break;
-    
+
             case MSPCodes.MSP_RAW_IMU:
                 // 512 for mpu6050, 256 for mma
                 // currently we are unable to differentiate between the sensor types, so we are goign with 512
                 SENSOR_DATA.accelerometer[0] = data.read16() / 512;
                 SENSOR_DATA.accelerometer[1] = data.read16() / 512;
                 SENSOR_DATA.accelerometer[2] = data.read16() / 512;
-    
+
                 // properly scaled
                 SENSOR_DATA.gyroscope[0] = data.read16() * (4 / 16.4);
                 SENSOR_DATA.gyroscope[1] = data.read16() * (4 / 16.4);
                 SENSOR_DATA.gyroscope[2] = data.read16() * (4 / 16.4);
-    
+
                 // no clue about scaling factor
                 SENSOR_DATA.magnetometer[0] = data.read16() / 1090;
                 SENSOR_DATA.magnetometer[1] = data.read16() / 1090;
@@ -167,7 +168,7 @@ MspHelper.prototype.process_data = function(dataHandler) {
                     var voltageMeter = {};
                     voltageMeter.id = data.readU8();
                     voltageMeter.voltage = data.readU8() / 10.0;
-                    
+
                     VOLTAGE_METERS.push(voltageMeter)
                 }
                 break;
@@ -179,23 +180,23 @@ MspHelper.prototype.process_data = function(dataHandler) {
                     currentMeter.id = data.readU8();
                     currentMeter.mAhDrawn = data.readU16(); // mAh
                     currentMeter.amperage = data.readU16() / 1000; // A
-                    
+
                     CURRENT_METERS.push(currentMeter);
                 }
                 break;
             case MSPCodes.MSP_BATTERY_STATE:
                 BATTERY_STATE.cellCount = data.readU8();
                 BATTERY_STATE.capacity = data.readU16(); // mAh
-                
+
                 BATTERY_STATE.voltage = data.readU8() / 10.0; // V
                 BATTERY_STATE.mAhDrawn = data.readU16(); // mAh
                 BATTERY_STATE.amperage = data.readU16() / 100; // A
                 break;
-                
+
             case MSPCodes.MSP_VOLTAGE_METER_CONFIG:
                 VOLTAGE_METER_CONFIGS = [];
                 var voltage_meter_count = data.readU8();
-                
+
                 for (var i = 0; i < voltage_meter_count; i++) {
                     var subframe_length = data.readU8();
                     if (subframe_length != 5) {
@@ -209,7 +210,7 @@ MspHelper.prototype.process_data = function(dataHandler) {
                         voltageMeterConfig.vbatscale = data.readU8();
                         voltageMeterConfig.vbatresdivval = data.readU8();
                         voltageMeterConfig.vbatresdivmultiplier = data.readU8();
-                        
+
                         VOLTAGE_METER_CONFIGS.push(voltageMeterConfig);
                     }
                 }
@@ -221,7 +222,7 @@ MspHelper.prototype.process_data = function(dataHandler) {
                 for (var i = 0; i < current_meter_count; i++) {
                     var currentMeterConfig = {};
                     var subframe_length = data.readU8();
-                    
+
                     if (subframe_length != 6) {
                         for (var j = 0; j < subframe_length; j++) {
                             data.readU8();
@@ -231,12 +232,12 @@ MspHelper.prototype.process_data = function(dataHandler) {
                         currentMeterConfig.sensorType = data.readU8();
                         currentMeterConfig.scale = data.readU16();
                         currentMeterConfig.offset = data.readU16();
-                        
+
                         CURRENT_METER_CONFIGS.push(currentMeterConfig);
                     }
                 }
                 break;
-                
+
             case MSPCodes.MSP_BATTERY_CONFIG:
                 BATTERY_CONFIG.vbatmincellvoltage = data.readU8() / 10; // 10-50
                 BATTERY_CONFIG.vbatmaxcellvoltage = data.readU8() / 10; // 10-50
@@ -244,7 +245,7 @@ MspHelper.prototype.process_data = function(dataHandler) {
                 BATTERY_CONFIG.capacity = data.readU16();
                 BATTERY_CONFIG.voltageMeterSource = data.readU8();
                 BATTERY_CONFIG.currentMeterSource = data.readU8();
-                
+
                 break;
             case MSPCodes.MSP_RC_TUNING:
                 RC_tuning.RC_RATE = parseFloat((data.readU8() / 100).toFixed(2));
@@ -287,7 +288,7 @@ MspHelper.prototype.process_data = function(dataHandler) {
                     }
                 }
                 break;
-    
+
             case MSPCodes.MSP_ARMING_CONFIG:
                 if (semver.gte(CONFIG.apiVersion, "1.8.0")) {
                     ARMING_CONFIG.auto_disarm_delay = data.readU8();
@@ -319,7 +320,7 @@ MspHelper.prototype.process_data = function(dataHandler) {
                 MISC.vbatmincellvoltage = data.readU8() / 10; // 10-50
                 MISC.vbatmaxcellvoltage = data.readU8() / 10; // 10-50
                 MISC.vbatwarningcellvoltage = data.readU8() / 10; // 10-50
-                break;                
+                break;
             case MSPCodes.MSP_MOTOR_CONFIG:
                 MOTOR_CONFIG.minthrottle = data.readU16(); // 0-2000
                 MOTOR_CONFIG.maxthrottle = data.readU16(); // 0-2000
@@ -349,13 +350,13 @@ MspHelper.prototype.process_data = function(dataHandler) {
                 break;
             case MSPCodes.MSP_BOXNAMES:
                 AUX_CONFIG = []; // empty the array as new data is coming in
-    
+
                 var buff = [];
                 for (var i = 0; i < data.byteLength; i++) {
                     var char = data.readU8();
                     if (char == 0x3B) { // ; (delimeter char)
                         AUX_CONFIG.push(String.fromCharCode.apply(null, buff)); // convert bytes into ASCII and save as strings
-    
+
                         // empty buffer
                         buff = [];
                     } else {
@@ -365,13 +366,13 @@ MspHelper.prototype.process_data = function(dataHandler) {
                 break;
             case MSPCodes.MSP_PIDNAMES:
                 PID_names = []; // empty the array as new data is coming in
-    
+
                 var buff = [];
                 for (var i = 0; i < data.byteLength; i++) {
                     var char = data.readU8();
                     if (char == 0x3B) { // ; (delimeter char)
                         PID_names.push(String.fromCharCode.apply(null, buff)); // convert bytes into ASCII and save as strings
-    
+
                         // empty buffer
                         buff = [];
                     } else {
@@ -381,14 +382,14 @@ MspHelper.prototype.process_data = function(dataHandler) {
                 break;
             case MSPCodes.MSP_BOXIDS:
                 AUX_CONFIG_IDS = []; // empty the array as new data is coming in
-    
+
                 for (var i = 0; i < data.byteLength; i++) {
                     AUX_CONFIG_IDS.push(data.readU8());
                 }
                 break;
             case MSPCodes.MSP_SERVO_MIX_RULES:
                 break;
-    
+
             case MSPCodes.MSP_SERVO_CONFIGURATIONS:
                 SERVO_CONFIG = []; // empty the array as new data is coming in
                 if (semver.gte(CONFIG.apiVersion, "1.33.0")) {
@@ -404,7 +405,7 @@ MspHelper.prototype.process_data = function(dataHandler) {
                                 'indexOfChannelToForward':  data.readU8(),
                                 'reversedInputSources':     data.readU32()
                             };
-    
+
                             SERVO_CONFIG.push(arr);
                         }
                     }
@@ -421,7 +422,7 @@ MspHelper.prototype.process_data = function(dataHandler) {
                                 'indexOfChannelToForward':  data.readU8(),
                                 'reversedInputSources':     data.readU32()
                             };
-    
+
                             SERVO_CONFIG.push(arr);
                         }
                     }
@@ -438,11 +439,11 @@ MspHelper.prototype.process_data = function(dataHandler) {
                                 'indexOfChannelToForward':  undefined,
                                 'reversedInputSources':     0
                             };
-    
+
                             SERVO_CONFIG.push(arr);
                         }
                     }
-    
+
                     if (semver.eq(CONFIG.apiVersion, '1.10.0')) {
                         // drop two unused servo configurations due to MSP rx buffer to small)
                         while (SERVO_CONFIG.length > 8) {
@@ -455,7 +456,7 @@ MspHelper.prototype.process_data = function(dataHandler) {
                 RC_DEADBAND_CONFIG.deadband = data.readU8();
                 RC_DEADBAND_CONFIG.yaw_deadband = data.readU8();
                 RC_DEADBAND_CONFIG.alt_hold_deadband = data.readU8();
-    
+
                 if (semver.gte(CONFIG.apiVersion, "1.17.0")) {
                     RC_DEADBAND_CONFIG.deadband3d_throttle = data.readU16();
                 }
@@ -532,7 +533,7 @@ MspHelper.prototype.process_data = function(dataHandler) {
             case MSPCodes.MSP_GPS_SV_INFO:
                 if (data.byteLength > 0) {
                     var numCh = data.readU8();
-    
+
                     for (var i = 0; i < numCh; i++) {
                         GPS_DATA.chn[i] = data.readU8();
                         GPS_DATA.svid[i] = data.readU8();
@@ -541,10 +542,10 @@ MspHelper.prototype.process_data = function(dataHandler) {
                     }
                 }
                 break;
-    
+
             case MSPCodes.MSP_RX_MAP:
                 RC_MAP = []; // empty the array as new data is coming in
-    
+
                 for (var i = 0; i < data.byteLength; i++) {
                     RC_MAP.push(data.readU8());
                 }
@@ -552,32 +553,30 @@ MspHelper.prototype.process_data = function(dataHandler) {
             case MSPCodes.MSP_SET_RX_MAP:
                 console.log('RCMAP saved');
                 break;
-                
+
             case MSPCodes.MSP_MIXER_CONFIG:
                 MIXER_CONFIG.mixer = data.readU8();
                 break;
-                
+
             case MSPCodes.MSP_FEATURE_CONFIG:
                 FEATURE_CONFIG.features.setMask(data.readU32());
-              
-                updateTabList(FEATURE_CONFIG.features);
                 break;
-              
+
             case MSPCodes.MSP_BOARD_ALIGNMENT_CONFIG:
                 BOARD_ALIGNMENT_CONFIG.roll = data.read16(); // -180 - 360
                 BOARD_ALIGNMENT_CONFIG.pitch = data.read16(); // -180 - 360
                 BOARD_ALIGNMENT_CONFIG.yaw = data.read16(); // -180 - 360
                 break;
-                
+
             case MSPCodes.MSP_SET_REBOOT:
                 console.log('Reboot request accepted');
                 break;
-    
+
             case MSPCodes.MSP_API_VERSION:
                 CONFIG.mspProtocolVersion = data.readU8();
                 CONFIG.apiVersion = data.readU8() + '.' + data.readU8() + '.0';
                 break;
-    
+
             case MSPCodes.MSP_FC_VARIANT:
                 var identifier = '';
                 for (var i = 0; i < 4; i++) {
@@ -585,11 +584,11 @@ MspHelper.prototype.process_data = function(dataHandler) {
                 }
                 CONFIG.flightControllerIdentifier = identifier;
                 break;
-    
+
             case MSPCodes.MSP_FC_VERSION:
                 CONFIG.flightControllerVersion = data.readU8() + '.' + data.readU8() + '.' + data.readU8();
                 break;
-    
+
             case MSPCodes.MSP_BUILD_INFO:
                 var dateLength = 11;
                 var buff = [];
@@ -597,14 +596,14 @@ MspHelper.prototype.process_data = function(dataHandler) {
                     buff.push(data.readU8());
                 }
                 buff.push(32); // ascii space
-    
+
                 var timeLength = 8;
                 for (var i = 0; i < timeLength; i++) {
                     buff.push(data.readU8());
                 }
                 CONFIG.buildInfo = String.fromCharCode.apply(null, buff);
                 break;
-    
+
             case MSPCodes.MSP_BOARD_INFO:
                 var identifier = '';
                 for (var i = 0; i < 4; i++) {
@@ -619,7 +618,7 @@ MspHelper.prototype.process_data = function(dataHandler) {
                 }
 
                 break;
-    
+
             case MSPCodes.MSP_NAME:
                 CONFIG.name = '';
                 var char;
@@ -627,11 +626,11 @@ MspHelper.prototype.process_data = function(dataHandler) {
                     CONFIG.name += String.fromCharCode(char);
                 }
                 break;
-    
+
             case MSPCodes.MSP_SET_CHANNEL_FORWARDING:
                 console.log('Channel forwarding saved');
                 break;
-    
+
             case MSPCodes.MSP_CF_SERIAL_CONFIG:
                 if (semver.lt(CONFIG.apiVersion, "1.6.0")) {
                     SERIAL_CONFIG.ports = [];
@@ -651,7 +650,7 @@ MspHelper.prototype.process_data = function(dataHandler) {
                     SERIAL_CONFIG.ports = [];
                     var bytesPerPort = 1 + 2 + (1 * 4);
                     var serialPortCount = data.byteLength / bytesPerPort;
-    
+
                     for (var i = 0; i < serialPortCount; i++) {
                         var serialPort = {
                             identifier: data.readU8(),
@@ -661,21 +660,21 @@ MspHelper.prototype.process_data = function(dataHandler) {
                             telemetry_baudrate: self.BAUD_RATES[data.readU8()],
                             blackbox_baudrate: self.BAUD_RATES[data.readU8()]
                         }
-    
+
                         SERIAL_CONFIG.ports.push(serialPort);
                     }
                 }
                 break;
-    
+
             case MSPCodes.MSP_SET_CF_SERIAL_CONFIG:
                 console.log('Serial config saved');
                 break;
-    
+
             case MSPCodes.MSP_MODE_RANGES:
                 MODE_RANGES = []; // empty the array as new data is coming in
-    
+
                 var modeRangeCount = data.byteLength / 4; // 4 bytes per item.
-    
+
                 for (var i = 0; i < modeRangeCount; i++) {
                     var modeRange = {
                         id: data.readU8(),
@@ -688,12 +687,12 @@ MspHelper.prototype.process_data = function(dataHandler) {
                     MODE_RANGES.push(modeRange);
                 }
                 break;
-    
+
             case MSPCodes.MSP_ADJUSTMENT_RANGES:
                 ADJUSTMENT_RANGES = []; // empty the array as new data is coming in
-    
+
                 var adjustmentRangeCount = data.byteLength / 6; // 6 bytes per item.
-    
+
                 for (var i = 0; i < adjustmentRangeCount; i++) {
                     var adjustmentRange = {
                         slotIndex: data.readU8(),
@@ -708,7 +707,7 @@ MspHelper.prototype.process_data = function(dataHandler) {
                     ADJUSTMENT_RANGES.push(adjustmentRange);
                 }
                 break;
-    
+
             case MSPCodes.MSP_RX_CONFIG:
                 RX_CONFIG.serialrx_provider = data.readU8();
                 RX_CONFIG.stick_max = data.readU16();
@@ -738,7 +737,7 @@ MspHelper.prototype.process_data = function(dataHandler) {
                     RX_CONFIG.airModeActivateThreshold = 0;
                 }
                 break;
-    
+
             case MSPCodes.MSP_FAILSAFE_CONFIG:
                 FAILSAFE_CONFIG.failsafe_delay = data.readU8();
                 FAILSAFE_CONFIG.failsafe_off_delay = data.readU8();
@@ -749,10 +748,10 @@ MspHelper.prototype.process_data = function(dataHandler) {
                     FAILSAFE_CONFIG.failsafe_procedure = data.readU8();
                 }
                 break;
-    
+
             case MSPCodes.MSP_RXFAIL_CONFIG:
                 RXFAIL_CONFIG = []; // empty the array as new data is coming in
-    
+
                 var channelCount = data.byteLength / 3;
                 for (var i = 0; i < channelCount; i++) {
                     var rxfailChannel = {
@@ -762,7 +761,7 @@ MspHelper.prototype.process_data = function(dataHandler) {
                     RXFAIL_CONFIG.push(rxfailChannel);
                 }
                 break;
-    
+
             case MSPCodes.MSP_ADVANCED_CONFIG:
                 PID_ADVANCED_CONFIG.gyro_sync_denom = data.readU8();
                 PID_ADVANCED_CONFIG.pid_process_denom = data.readU8();
@@ -771,7 +770,7 @@ MspHelper.prototype.process_data = function(dataHandler) {
                 PID_ADVANCED_CONFIG.motor_pwm_rate = data.readU16();
                 if (semver.gte(CONFIG.apiVersion, "1.24.0")) {
                     PID_ADVANCED_CONFIG.digitalIdlePercent = data.readU16() / 100;
-    
+
                     if (semver.gte(CONFIG.apiVersion, "1.25.0")) {
                         PID_ADVANCED_CONFIG.gyroUse32kHz = data.readU8();
                     }
@@ -820,41 +819,45 @@ MspHelper.prototype.process_data = function(dataHandler) {
                 SENSOR_CONFIG.baro_hardware = data.readU8();
                 SENSOR_CONFIG.mag_hardware = data.readU8();
                 break;
-    
+
             case MSPCodes.MSP_LED_STRIP_CONFIG:
                 LED_STRIP = [];
-    
+
                 var ledDirectionLetters =       ['n', 'e', 's', 'w', 'u', 'd'];      // in LSB bit order
                 var ledFunctionLetters =        ['i', 'w', 'f', 'a', 't', 'r', 'c', 'g', 's', 'b', 'l']; // in LSB bit order
                 var ledBaseFunctionLetters =    ['c', 'f', 'a', 'l', 's', 'g', 'r']; // in LSB bit
-                var ledOverlayLetters =         ['t', 'o', 'b', 'n', 'i', 'w']; // in LSB bit
-    
-    
+                if (semver.lt(CONFIG.apiVersion, "1.36.0")) {
+                    var ledOverlayLetters =     ['t', 'o', 'b', 'w', 'i', 'w']; // in LSB bit
+                } else {
+                    var ledOverlayLetters =     ['t', 'o', 'b', 'v', 'i', 'w']; // in LSB bit
+                }
+
+
                 var ledCount = data.byteLength / 7; // v1.4.0 and below incorrectly reported 4 bytes per led.
                 if (semver.gte(CONFIG.apiVersion, "1.20.0"))
                     ledCount = data.byteLength / 4;
-    
+
                 for (var i = 0; i < ledCount; i++) {
-    
+
                     if (semver.lt(CONFIG.apiVersion, "1.20.0")) {
                         var directionMask = data.readU16();
-    
+
                         var directions = [];
                         for (var directionLetterIndex = 0; directionLetterIndex < ledDirectionLetters.length; directionLetterIndex++) {
                             if (bit_check(directionMask, directionLetterIndex)) {
                                 directions.push(ledDirectionLetters[directionLetterIndex]);
                             }
                         }
-    
+
                         var functionMask = data.readU16();
-    
+
                         var functions = [];
                         for (var functionLetterIndex = 0; functionLetterIndex < ledFunctionLetters.length; functionLetterIndex++) {
                             if (bit_check(functionMask, functionLetterIndex)) {
                                 functions.push(ledFunctionLetters[functionLetterIndex]);
                             }
                         }
-    
+
                         var led = {
                             directions: directions,
                             functions: functions,
@@ -862,11 +865,11 @@ MspHelper.prototype.process_data = function(dataHandler) {
                             y: data.readU8(),
                             color: data.readU8()
                         };
-    
+
                         LED_STRIP.push(led);
                     } else {
                         var mask = data.readU32();
-    
+
                         var functionId = (mask >> 8) & 0xF;
                         var functions = [];
                         for (var baseFunctionLetterIndex = 0; baseFunctionLetterIndex < ledBaseFunctionLetters.length; baseFunctionLetterIndex++) {
@@ -875,14 +878,14 @@ MspHelper.prototype.process_data = function(dataHandler) {
                                 break;
                             }
                         }
-    
+
                         var overlayMask = (mask >> 12) & 0x3F;
                         for (var overlayLetterIndex = 0; overlayLetterIndex < ledOverlayLetters.length; overlayLetterIndex++) {
                             if (bit_check(overlayMask, overlayLetterIndex)) {
                                 functions.push(ledOverlayLetters[overlayLetterIndex]);
                             }
                         }
-    
+
                         var directionMask = (mask >> 22) & 0x3F;
                         var directions = [];
                         for (var directionLetterIndex = 0; directionLetterIndex < ledDirectionLetters.length; directionLetterIndex++) {
@@ -898,7 +901,7 @@ MspHelper.prototype.process_data = function(dataHandler) {
                             directions: directions,
                             parameters: (mask >> 28) & 0xF
                         };
-    
+
                         LED_STRIP.push(led);
                     }
                 }
@@ -907,13 +910,13 @@ MspHelper.prototype.process_data = function(dataHandler) {
                 console.log('Led strip config saved');
                 break;
             case MSPCodes.MSP_LED_COLORS:
-    
+
                 LED_COLORS = [];
-    
+
                 var colorCount = data.byteLength / 4;
-    
+
                 for (var i = 0; i < colorCount; i++) {
-    
+
                     var color = {
                         h: data.readU16(),
                         s: data.readU8(),
@@ -921,20 +924,20 @@ MspHelper.prototype.process_data = function(dataHandler) {
                     };
                     LED_COLORS.push(color);
                 }
-    
+
                 break;
             case MSPCodes.MSP_SET_LED_COLORS:
                 console.log('Led strip colors saved');
                 break;
             case MSPCodes.MSP_LED_STRIP_MODECOLOR:
                 if (semver.gte(CONFIG.apiVersion, "1.19.0")) {
-    
+
                     LED_MODE_COLORS = [];
-    
+
                     var colorCount = data.byteLength / 3;
-    
+
                     for (var i = 0; i < colorCount; i++) {
-    
+
                         var mode_color = {
                             mode: data.readU8(),
                             direction: data.readU8(),
@@ -947,7 +950,7 @@ MspHelper.prototype.process_data = function(dataHandler) {
             case MSPCodes.MSP_SET_LED_STRIP_MODECOLOR:
                 console.log('Led strip mode colors saved');
                 break;
-    
+
             case MSPCodes.MSP_DATAFLASH_SUMMARY:
                 if (data.byteLength >= 13) {
                     var flags = data.readU8();
@@ -974,7 +977,7 @@ MspHelper.prototype.process_data = function(dataHandler) {
                 break;
             case MSPCodes.MSP_SDCARD_SUMMARY:
                 var flags = data.readU8();
-    
+
                 SDCARD.supported = (flags & 0x01) != 0;
                 SDCARD.state = data.readU8();
                 SDCARD.filesystemLastError = data.readU8();
@@ -995,30 +998,30 @@ MspHelper.prototype.process_data = function(dataHandler) {
                 if (semver.gte(CONFIG.apiVersion, "1.33.0")) {
                     var providerCount = data.readU8();
                     bytesRemaining--;
-                    
+
                     TRANSPONDER.supported = providerCount > 0;
                     TRANSPONDER.providers = [];
-                    
+
                     for (var i = 0; i < providerCount; i++) {
                         var provider = {
                             id: data.readU8(),
                             dataLength: data.readU8()
                         };
                         bytesRemaining -= 2;
-                        
+
                         TRANSPONDER.providers.push(provider);
                     }
                     TRANSPONDER.provider = data.readU8();
                     bytesRemaining--;
-                    
+
                 } else {
                     TRANSPONDER.supported = (data.readU8() & 1) != 0;
                     bytesRemaining--;
-                    
+
                     // only ILAP was supported prior to 1.33.0
                     TRANSPONDER.providers = [{
-                        id: 1, // ILAP 
-                        dataLength: 6  
+                        id: 1, // ILAP
+                        dataLength: 6
                     }];
                     TRANSPONDER.provider = TRANSPONDER.providers[0].id;
                 }
@@ -1036,7 +1039,7 @@ MspHelper.prototype.process_data = function(dataHandler) {
             case MSPCodes.MSP_SET_ADJUSTMENT_RANGE:
                 console.log('Adjustment range saved');
                 break;
-    
+
             case MSPCodes.MSP_PID_CONTROLLER:
                 PID.controller = data.readU8();
                 break;
@@ -1243,7 +1246,7 @@ MspHelper.prototype.crunch = function(code) {
                 .push8(BATTERY_CONFIG.voltageMeterSource)
                 .push8(BATTERY_CONFIG.currentMeterSource);
             break;
-// FIXME - Needs updating before it can be used. 
+// FIXME - Needs updating before it can be used.
 //        case MSPCodes.MSP_SET_VOLTAGE_METER_CONFIG:
 //            buffer.push8(MISC.vbatscale)
 //                .push8(Math.round(BATTERY_CONFIG.vbatmincellvoltage * 10))
@@ -1294,7 +1297,7 @@ MspHelper.prototype.crunch = function(code) {
 
         case MSPCodes.MSP_SET_TRANSPONDER_CONFIG:
             if (semver.gte(CONFIG.apiVersion, "1.33.0")) {
-                buffer.push8(TRANSPONDER.provider); // 
+                buffer.push8(TRANSPONDER.provider); //
             }
             for (var i = 0; i < TRANSPONDER.data.length; i++) {
                 buffer.push8(TRANSPONDER.data[i]);
@@ -1536,7 +1539,7 @@ MspHelper.prototype.sendServoConfigurations = function(onCompleteCallback) {
                 .push16(servoConfiguration.max)
                 .push16(servoConfiguration.middle)
                 .push8(servoConfiguration.rate);
-            
+
             if (semver.gte(CONFIG.apiVersion, "1.33.0")) {
                 buffer.push8(servoConfiguration.angleAtMin)
                     .push8(servoConfiguration.angleAtMax);
@@ -1660,7 +1663,11 @@ MspHelper.prototype.sendLedStripConfig = function(onCompleteCallback) {
         var ledDirectionLetters =        ['n', 'e', 's', 'w', 'u', 'd'];      // in LSB bit order
         var ledFunctionLetters =         ['i', 'w', 'f', 'a', 't', 'r', 'c', 'g', 's', 'b', 'l']; // in LSB bit order
         var ledBaseFunctionLetters =     ['c', 'f', 'a', 'l', 's', 'g', 'r']; // in LSB bit
-        var ledOverlayLetters =         ['t', 'o', 'b', 'n', 'i', 'w']; // in LSB bit
+        if (semver.lt(CONFIG.apiVersion, "1.36.0")) {
+            var ledOverlayLetters =      ['t', 'o', 'b', 'w', 'i', 'w']; // in LSB bit
+        } else {
+            var ledOverlayLetters =      ['t', 'o', 'b', 'v', 'i', 'w']; // in LSB bit
+        }
 
         var buffer = [];
 

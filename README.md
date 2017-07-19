@@ -26,10 +26,15 @@ Please note - the application will automatically update itself when new versions
 
 ### Alternative way
 
-1. Clone the repo to any local directory or download it as zip
-2. Start Chromium or Google Chrome and go to tools -> extension
-3. Check the "Developer mode" checkbox
-4. Click on load unpacked extension and point it to the Cleanflight Configurator directory (for example D:/cleanflight-configurator)
+1. Clone the configurator repository (from Github) to any local directory or download it as zip.
+2. Extract to a folder and not the folder.
+3. Start Google Chrome.
+4. Click the 3-dots on the far right of the URL bar.
+5. Select Settings
+6. On the left of the screen select Extensions.
+7. Check the Developer Mode checkbox.
+8. Click on load unpacked extension.
+9. Point it to the folder you extracted the zip to.
 
 ## How to use
 
@@ -43,7 +48,11 @@ Make sure Settings -> System -> "User hardware acceleration when available" is c
 
 ### Linux users
 
-Dont forget to add your user into dialout group "sudo usermod -aG dialout YOUR_USERNAME" for serial access
+If connecting Cleanflight Configurator to your flight controller's USB port does not work out-of-the box, follow this check-list:
+
+1. After connecting, `sudo dmesg` should print a message similar to `usb 2-1.1: new full-speed USB device number 17 using ehci-pci`. If not, there may be a problem with your cable/FC.
+2. FCs with USB Virtual Com Port (VCP) usually use USB CDC (Communications Device Class) ACM (Abstract Control Model) protocol. The driver `cdc_acm` (kernel option `CONFIG_USB_ACM`) should pick up the device, `cdc_acm 2-1.1:1.0: ttyACM0: USB ACM device` should appear in `sudo dmesg`.
+3. The device file (usually `/dev/ttyACM0`) needs to be writeable by your user account. This is best achieved by creating a udev rule `/etc/udev/rules.d/90-ttyACM-group-plugdev.rules` that contains `KERNEL=="ttyACM[0-9]", GROUP="plugdev"` and ensuring you are in the `plugdev` group using `sudo usermod -aG plugdev YOUR_USERNAME`. Re-plug the device / logout & login for changes to take effect.
 
 ### Linux / MacOSX users
 
